@@ -59,22 +59,27 @@ class Model():
 
 
 if __name__ == "__main__":
-    dataset = Dataset()
-    dataset.load_all()
+    train_index = 1979
+    test_index = 224
+    ds_name = 'Pose05'
+
+    dataset = Dataset('Pose05')
+    dataset.load()
+    dataset.describe()
     trainset, testset = dataset.gen_dataset()
     """
     # PCA
     pca_model = Model('PCA')
-    pca_model.train(trainset['data'], trainset['label'])
-    pred_label, pred_confidence = pca_model.predict(testset['data'])
-    pca_model.evaluate(pred_label, testset['label'])
-    """
+    pca_model.train(trainset['data'][:train_index], trainset['label'][:train_index])
+    pred_label, pred_confidence = pca_model.predict(testset['data'][:test_index])
+    pca_model.evaluate(pred_label, testset['label'][:test_index])
+    
     # LDA
     lda_model = Model('LDA')
-    lda_model.train(trainset['data'], trainset['label'])
-    pred_label, pred_confidence = lda_model.predict(testset['data'])
-    lda_model.evaluate(pred_label, testset['label'])
-    
+    lda_model.train(trainset['data'][:train_index], trainset['label'][:train_index])
+    pred_label, pred_confidence = lda_model.predict(testset['data'][:test_index])
+    lda_model.evaluate(pred_label, testset['label'][:test_index])
+    """
     # LBPH
     lbph_model = Model('LBPH')
     lbph_model.train(trainset['data'], trainset['label'])
