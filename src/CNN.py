@@ -1,3 +1,4 @@
+import os
 import cv2
 import numpy as np
 from scipy.io import loadmat
@@ -5,14 +6,27 @@ import tensorflow as tf
 
 from dataset import Dataset
 
+
+# 配置GPU选项
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.7)
+configTf = tf.ConfigProto()
+configTf.gpu_options.allow_growth = True
+
+# 配置
+num_people = 68
+epochs = 2000
+train_index = 1979
+test_index = 224
+ds_name = 'Pose05'
+
+
 # 生成数据集
-dataset = Dataset('Pose05')
+dataset = Dataset(ds_name)
 dataset.load()
 trainset, testset = dataset.gen_cnn_dataset()
 
 # 定义并训练CNN模型
-num_people = 68
-
 data_input = tf.placeholder(tf.float32,[None, 64, 64, 1])
 label_input = tf.placeholder(tf.float32,[None, num_people])
 
@@ -42,14 +56,16 @@ accuracy = tf.metrics.accuracy(
 init = tf.group(
     tf.global_variables_initializer(),tf.local_variables_initializer(),tf.local_variables_initializer())
 #定义for循环，完成样本的加载和数据训练
-with tf.Session() as sess:
+with tf.Session(config=configTf) as sess:
     sess.run(init)
-    for i in range(0, 2):
-        print('e: ' + str(i))
+    for i in range(0, epochs):
         #完成数据加载并计算损失函数和训练值
-        sess.run([train,loss],feed_dict={data_input: trainset['data'],
-                                         label_input: trainset['label']})
-        acc = sess.run(accuracy,feed_dict={data_input: testset['data'],
-                                           label_input: testset['label']})
-#打印当前概率精度
-    print('acc:%.2f',acc)
+        _, loss_val = sess.run([train, loss], feed_dict={data_input: trainset['data'][:train_index],
+                                         label_input: trainset['label'][:train_index]})
+        acc = sess.run(accuracy, feed_dict={data_input: testset['data'][:test_index],
+                                           label_input: testset['label'][:test_index]})
+        if i % 20 == 0:
+            print('e: ' + str(i) + '\tloss: ', loss_val)
+
+    #打印当前概率精度
+    print('acc: ', acc)

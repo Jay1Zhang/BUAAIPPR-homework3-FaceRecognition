@@ -182,6 +182,53 @@ class Dataset():
         }
         return trainset, testset
 
+    def gen_cnn_dataset(self):
+        # trainset
+        train_data = self.train_data.astype(int)
+        train_data = train_data.reshape(train_data.shape[0], 64, 64, 1).astype(np.float32) / 255
+
+        labels = self.train_label.astype(int) - 1
+        batch_size = tf.size(labels)
+        labels = tf.expand_dims(labels, 1)
+        indices = tf.expand_dims(tf.range(0, batch_size, 1), 1)
+        concated = tf.concat([indices, labels], 1)
+        onehot_labels = tf.sparse_to_dense(concated, tf.stack([batch_size, 68]), 1.0, 0.0)
+
+        train_label = []
+        with tf.Session() as sess:
+            val = sess.run(onehot_labels)
+            train_label.extend(val)
+        train_label = np.array(train_label)
+
+        trainset = {
+            'data': train_data,
+            'label': train_label
+        }
+
+        # testset
+        test_data = self.test_data.astype(int)
+        test_data = test_data.reshape(test_data.shape[0], 64, 64, 1).astype(np.float32) / 255
+
+        labels = self.test_label.astype(int) - 1
+        batch_size = tf.size(labels)
+        labels = tf.expand_dims(labels, 1)
+        indices = tf.expand_dims(tf.range(0, batch_size, 1), 1)
+        concated = tf.concat([indices, labels], 1)
+        onehot_labels = tf.sparse_to_dense(concated, tf.stack([batch_size, 68]), 1.0, 0.0)
+
+        test_label = []
+        with tf.Session() as sess:
+            val = sess.run(onehot_labels)
+            test_label.extend(val)
+        test_label = np.array(test_label)
+        
+        testset = {
+            'data': test_data,
+            'label': test_label
+        }
+
+        return trainset, testset
+
 
     def describe(self):
         # describe dataset and generate sample image to ../image/sample/
@@ -279,7 +326,6 @@ pca_model.evaluate(pred_label, testset['label'])
 
 - ##### Pose29
 
-- ##### PoseAll
 
 
 
@@ -485,21 +531,186 @@ class Model():
 
 ## 4 基于卷积神经网络的人脸识别方法
 
-卷积神经网络（CNN）是人脸识别方面最常用的一类深度学习方法。深度学习方法的主要优势是可用大量数据来训练，从而学到对训练数据中出现的变化情况稳健的人脸表征。这种方法不需要设计对不同类型的类内差异（比如光照、姿势、面部表情、年龄等）稳健的特定特征，而是可以从训练数据中学到它们。深度学习方法的主要短板是它们需要使用非常大的数据集来训练，而且这些数据集中需要包含足够的变化，从而可以泛化到未曾见过的样本上。
+卷积神经网络（CNN）是人脸识别方面最常用的一类深度学习方法。用于人脸识别的 CNN 模型可以使用不同的方法来训练。其中之一是将该问题当作是一个分类问题，训练集中的每个主体都对应一个类别。训练完之后，可以通过去除分类层并将之前层的特征用作人脸表征而将该模型用于识别不存在于训练集中的主体。
 
-用于人脸识别的 CNN 模型可以使用不同的方法来训练。其中之一是将该问题当作是一个分类问题，训练集中的每个主体都对应一个类别。训练完之后，可以通过去除分类层并将之前层的特征用作人脸表征而将该模型用于识别不存在于训练集中的主体。
-
-
-
-对于基于 CNN 的人脸识别方法，影响准确度的因素主要有三个：训练数据、CNN 架构和损失函数。因为在大多数深度学习应用中，都需要大训练集来防止过拟合。一般而言，为分类任务训练的 CNN 的准确度会随每类的样本数量的增长而提升。这是因为当类内差异更多时，CNN 模型能够学习到更稳健的特征。但是，对于人脸识别，我们感兴趣的是提取出能够泛化到训练集中未曾出现过的主体上的特征。因此，用于人脸识别的数据集还需要包含大量主体，这样模型也能学习到更多类间差异。
+对于基于 CNN 的人脸识别方法，影响准确度的因素主要有三个：训练数据、CNN 架构和损失函数。下面逐个介绍本实验的配置。
 
 
 
-## 5 实验结果对比与分析
+### 4.1 训练数据
+
+由于设备限制（本机显卡为GTX 1050Ti），当训练数据超过2000张时，将会出现GPU显存溢出的情况，导致训练失败。因此，对于本实验，我尝试分别对五种姿态进行训练，且仅训练前45个人。
+
+首先利用两个for循环分别计算五种姿态的数据集中第45个人的index，
+
+```python
+for i in range(train_label05.shape[0]):
+    if train_label05[i] == 46:
+        break
+print('train index: ' + str(i-1))
+
+for i in range(test_label05.shape[0]):
+    if test_label05[i] == 46:
+        break
+print('test index: ' + str(i-1))
+```
+
+得到如下结果。
+
+| 姿态   | 训练集最大index | 测试集最大index |
+| ------ | --------------- | --------------- |
+| Pose05 | 1979            | 224             |
+| Pose07 | 941             | 134             |
+| Pose09 | 944             | 134             |
+| Pose27 | 1976            | 224             |
+| Pose29 | 944             | 134             |
+
+这样，在训练时只给CNN投喂前index个数据即可。
 
 
 
-## 6 总结
+### 4.2 CNN架构
+
+本次实验采用的CNN架构十分简单，仅包含一层卷积一层池化一层全连接层，具体见下：
+
+```python
+#通过卷积方法实现
+layer1 = tf.layers.conv2d(inputs=data_input, filters = 32,kernel_size=2,
+                          strides=1,padding='SAME',activation=tf.nn.relu)
+#实现池化层，减少数据量，pool_size=2表示数据量减少一半
+layer1_pool = tf.layers.max_pooling2d(layer1,pool_size=2,strides=2)
+#第二层设置输出，完成维度的转换，以第一次输出作为输入，建立n行的32*32*32输出
+layer2 = tf.reshape(layer1_pool,[-1,32*32*32])
+#设置输出激励函数
+layer2_relu = tf.layers.dense(layer2, 1024, tf.nn.relu)
+#完成输出，设置输入数据和输出维度
+output = tf.layers.dense(layer2_relu, num_people)
+```
+
+
+
+### 4.3 损失函数
+
+本次实验使用交叉熵作为损失函数，并使用梯度下降法进行训练
+
+```python
+#建立损失函数
+loss = tf.losses.softmax_cross_entropy(onehot_labels=label_input,logits=output)
+#使用梯度下降法进行训练
+train = tf.train.GradientDescentOptimizer(0.01).minimize(loss)
+```
+
+
+
+### 4.4 代码实现
+
+完整代码实现如下：
+
+```python
+import os
+import cv2
+import numpy as np
+from scipy.io import loadmat
+import tensorflow as tf
+
+from dataset import Dataset
+
+
+# 配置GPU选项
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.7)
+configTf = tf.ConfigProto()
+configTf.gpu_options.allow_growth = True
+
+# 配置
+num_people = 68
+epochs = 2000
+train_index = 1979
+test_index = 224
+ds_name = 'Pose05'
+
+
+# 生成数据集
+dataset = Dataset(ds_name)
+dataset.load()
+trainset, testset = dataset.gen_cnn_dataset()
+
+# 定义并训练CNN模型
+data_input = tf.placeholder(tf.float32,[None, 64, 64, 1])
+label_input = tf.placeholder(tf.float32,[None, num_people])
+
+#实现CNN卷积神经网络，并测试最终训练样本实现的检测概率
+#tf.layer方法可以直接实现一个卷积神经网络的搭建
+#通过卷积方法实现
+layer1 = tf.layers.conv2d(inputs=data_input, filters = 32,kernel_size=2,
+                          strides=1,padding='SAME',activation=tf.nn.relu)
+#实现池化层，减少数据量，pool_size=2表示数据量减少一半
+layer1_pool = tf.layers.max_pooling2d(layer1,pool_size=2,strides=2)
+#第二层设置输出，完成维度的转换，以第一次输出作为输入，建立n行的32*32*32输出
+layer2 = tf.reshape(layer1_pool,[-1,32*32*32])
+#设置输出激励函数
+layer2_relu = tf.layers.dense(layer2, 1024, tf.nn.relu)
+#完成输出，设置输入数据和输出维度
+output = tf.layers.dense(layer2_relu, num_people)
+
+#建立损失函数
+loss = tf.losses.softmax_cross_entropy(onehot_labels=label_input,logits=output)
+#使用梯度下降法进行训练
+train = tf.train.GradientDescentOptimizer(0.01).minimize(loss)
+#定义检测概率
+accuracy = tf.metrics.accuracy(
+    labels=tf.arg_max(label_input, 1), predictions=tf.arg_max(output, 1))[1]
+
+#对所有变量进行初始化
+init = tf.group(
+    tf.global_variables_initializer(),tf.local_variables_initializer(),tf.local_variables_initializer())
+#定义for循环，完成样本的加载和数据训练
+with tf.Session(config=configTf) as sess:
+    sess.run(init)
+    for i in range(0, epochs):
+        #完成数据加载并计算损失函数和训练值
+        _, loss_val = sess.run([train, loss], feed_dict={data_input: trainset['data'][:train_index],
+                                         label_input: trainset['label'][:train_index]})
+        acc = sess.run(accuracy, feed_dict={data_input: testset['data'][:test_index],
+                                           label_input: testset['label'][:test_index]})
+        print('e: ' + str(i) + '\tloss: ', loss_val)
+
+    #打印当前概率精度
+    print('acc: ', acc)
+
+```
+
+
+
+### 4.5 实验结果
+
+本次实验对五种姿态的数据集分别进行训练与测试，训练轮数均为2000 epochs，结果如下：
+
+- ##### Pose05
+
+  ![image-20200524145509786](assets/image-20200524145509786.png)
+
+- ##### Pose07
+
+  
+
+- ##### Pose09
+
+  
+
+- ##### Pose27
+
+  
+
+- ##### Pose29
+
+  
+
+
+
+
+
+## 5 总结
 
 特征脸算法对光照十分敏感。
 
@@ -524,6 +735,8 @@ PCA和LDA采用整体方法进行人脸辨别，LBP采用局部特征提取，�
 盖伯小波（Gabor Waelets）和离散傅里叶变换（DCT）。
 
 
+
+深度学习方法的主要优势是可用大量数据来训练，从而学到对训练数据中出现的变化情况稳健的人脸表征。这种方法不需要设计对不同类型的类内差异（比如光照、姿势、面部表情、年龄等）稳健的特定特征，而是可以从训练数据中学到它们。深度学习方法的主要短板是它们需要使用非常大的数据集来训练，而且这些数据集中需要包含足够的变化，从而可以泛化到未曾见过的样本上。
 
 
 
