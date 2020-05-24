@@ -15,10 +15,10 @@ configTf.gpu_options.allow_growth = True
 
 # 配置
 num_people = 68
-epochs = 2000
-train_index = 1979
-test_index = 224
-ds_name = 'Pose05'
+epochs = 4000
+train_index = 944
+test_index = 134
+ds_name = 'Pose29'
 
 
 # 生成数据集

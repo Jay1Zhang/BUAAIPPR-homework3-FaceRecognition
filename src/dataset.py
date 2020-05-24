@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 from scipy.io import loadmat
-#import tensorflow as tf
+import tensorflow as tf
 
 
 class Dataset():
@@ -149,7 +149,7 @@ class Dataset():
         }
         return trainset, testset
 
-    """
+    
     def gen_cnn_dataset(self):
         # trainset
         train_data = self.train_data.astype(int)
@@ -196,7 +196,7 @@ class Dataset():
         }
 
         return trainset, testset
-    """
+    
 
     def describe(self):
         # describe dataset and generate sample image to ../image/sample/
