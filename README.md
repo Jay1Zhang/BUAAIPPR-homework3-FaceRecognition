@@ -318,14 +318,17 @@ pca_model.evaluate(pred_label, testset['label'])
 
 - ##### Pose05
 
+  ![image-20200524155527450](assets/image-20200524155527450.png)
+
 - ##### Pose07
+
+  
 
 - ##### Pose09
 
 - ##### Pose27
 
 - ##### Pose29
-
 
 
 

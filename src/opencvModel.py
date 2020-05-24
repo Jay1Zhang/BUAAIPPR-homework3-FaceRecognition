@@ -59,9 +59,7 @@ class Model():
 
 
 if __name__ == "__main__":
-    train_index = 1979
-    test_index = 224
-    ds_name = 'Pose05'
+    ds_name = 'Pose07'
 
     dataset = Dataset(ds_name)
     dataset.load()
@@ -70,9 +68,9 @@ if __name__ == "__main__":
     
     # PCA
     pca_model = Model('PCA')
-    pca_model.train(trainset['data'][:train_index], trainset['label'][:train_index])
-    pred_label, pred_confidence = pca_model.predict(testset['data'][:test_index])
-    pca_model.evaluate(pred_label, testset['label'][:test_index])
+    pca_model.train(trainset['data'], trainset['label'])
+    pred_label, pred_confidence = pca_model.predict(testset['data'])
+    pca_model.evaluate(pred_label, testset['label'])
     """
     # LDA
     lda_model = Model('LDA')
