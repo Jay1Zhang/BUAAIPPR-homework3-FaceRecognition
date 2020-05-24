@@ -202,13 +202,15 @@ class Dataset():
         print('Dataset Name: ' + self.ds_name)
         print('Dataset Size: ' + str(self.size))
 
+        """
         if self.ds_name != 'PoseAll':
             img = self.train_data[0]
             cv2.imshow(self.ds_name, img)
             cv2.waitKey(0)
             cv2.destroyWindow(self.ds_name)
             cv2.imwrite('../image/sample/' + self.ds_name + '_sample.png', img)
-
+        """
+        
 
 if __name__ == "__main__":
     #dataset = Dataset('Pose29')
