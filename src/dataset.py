@@ -1,6 +1,8 @@
 import cv2
 import numpy as np
 from scipy.io import loadmat
+import tensorflow as tf
+
 
 class Dataset():
     path = '../dataset/PIE dataset/'
@@ -147,6 +149,53 @@ class Dataset():
         }
         return trainset, testset
 
+    def gen_cnn_dataset(self):
+        # trainset
+        train_data = self.train_data.astype(int)
+        train_data = train_data.reshape(train_data.shape[0], 64, 64, 1).astype(np.float32) / 255
+
+        labels = self.train_label.astype(int) - 1
+        batch_size = tf.size(labels)
+        labels = tf.expand_dims(labels, 1)
+        indices = tf.expand_dims(tf.range(0, batch_size, 1), 1)
+        concated = tf.concat([indices, labels], 1)
+        onehot_labels = tf.sparse_to_dense(concated, tf.stack([batch_size, 68]), 1.0, 0.0)
+
+        train_label = []
+        with tf.Session() as sess:
+            val = sess.run(onehot_labels)
+            train_label.extend(val)
+        train_label = np.array(train_label)
+
+        trainset = {
+            'data': train_data,
+            'label': train_label
+        }
+
+        # testset
+        test_data = self.test_data.astype(int)
+        test_data = test_data.reshape(test_data.shape[0], 64, 64, 1).astype(np.float32) / 255
+
+        labels = self.test_label.astype(int) - 1
+        batch_size = tf.size(labels)
+        labels = tf.expand_dims(labels, 1)
+        indices = tf.expand_dims(tf.range(0, batch_size, 1), 1)
+        concated = tf.concat([indices, labels], 1)
+        onehot_labels = tf.sparse_to_dense(concated, tf.stack([batch_size, 68]), 1.0, 0.0)
+
+        test_label = []
+        with tf.Session() as sess:
+            val = sess.run(onehot_labels)
+            test_label.extend(val)
+        test_label = np.array(test_label)
+        
+        testset = {
+            'data': test_data,
+            'label': test_label
+        }
+
+        return trainset, testset
+
 
     def describe(self):
         # describe dataset and generate sample image to ../image/sample/
@@ -166,5 +215,6 @@ if __name__ == "__main__":
     #dataset.load()
     dataset = Dataset()
     dataset.load_all()
+    dataset.gen_cnn_dataset()
 
     dataset.describe()

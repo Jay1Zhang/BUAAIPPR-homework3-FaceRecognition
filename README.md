@@ -203,7 +203,7 @@ class Dataset():
 
 
 
-## 3 传统人脸识别方法
+## 3 经典人脸识别方法
 
 人脸识别的第一步，就是要找到一个模型可以用简洁又具有差异性的方式准确反映出每个人脸的特征。在识别人脸时，先将当前人脸采用与前述同样的方式提取特征，再从已有特征集中找出当前特征的最邻近样本，从而得到当前人脸的标签。
 
@@ -253,13 +253,33 @@ Eigenfaces 通常也被称为特征脸，是一种从主成分分析（Principal
 
 #### 3.1.3 代码实现
 
-```pyhthon
+```python
+dataset = Dataset()
+dataset.load_all()
+trainset, testset = dataset.gen_dataset()
 
+# PCA
+pca_model = Model('PCA')
+pca_model.train(trainset['data'], trainset['label'])
+pred_label, pred_confidence = pca_model.predict(testset['data'])
+pca_model.evaluate(pred_label, testset['label'])
 ```
 
 
 
 #### 3.1.4 实验结果
+
+- ##### Pose05
+
+- ##### Pose07
+
+- ##### Pose09
+
+- ##### Pose27
+
+- ##### Pose29
+
+- ##### PoseAll
 
 
 
@@ -317,7 +337,15 @@ FisherFaces 采用线性判别分析（linear discriminant analysis，LDA）实�
 #### 3.1.2 代码实现
 
 ```python
+dataset = Dataset()
+dataset.load_all()
+trainset, testset = dataset.gen_dataset()
 
+# LDA
+lda_model = Model('LDA')
+lda_model.train(trainset['data'], trainset['label'])
+pred_label, pred_confidence = lda_model.predict(testset['data'])
+lda_model.evaluate(pred_label, testset['label'])
 ```
 
 
@@ -362,12 +390,82 @@ LBP算法的基本原理是，将像素点A的值与其最邻近的8个像素点
 #### 3.3.2 代码实现
 
 ```python
+dataset = Dataset()
+dataset.load_all()
+trainset, testset = dataset.gen_dataset()
 
+# LBPH
+lbph_model = Model('LBPH')
+lbph_model.train(trainset['data'], trainset['label'])
+pred_label, pred_confidence = lbph_model.predict(testset['data'])
+lbph_model.evaluate(pred_label, testset['label'])
 ```
 
 
 
 #### 3.3.3 实验结果
+
+
+
+
+
+### 3.4 Opencv Model 代码实现
+
+```python
+class Model():
+    def __init__(self, model_name='LBPH'):
+        self.model_name = model_name
+
+        if model_name == 'PCA':
+            # 特征脸方法
+            self.model = cv2.face.EigenFaceRecognizer_create()
+        elif model_name == 'LDA':
+            # 线性判别分析
+            self.model = cv2.face.FisherFaceRecognizer_create()
+        elif model_name == 'LBPH':
+            # LBP 局部二值模式直方图
+            self.model = cv2.face.LBPHFaceRecognizer_create()
+        else:
+            print("ERROR,non support model type...")
+            self.model = None
+    
+    def train(self, train_data, train_label):
+        print('training...')
+        startime = time.time()
+        self.model.train(train_data, train_label)
+        endtime = time.time()
+        costime = round(endtime - startime, 0)
+        print(self.model_name + ' 训练耗时: ' + str(costime) + 's')
+
+    def predict(self, test_data):
+        pred_label = []
+        pred_confidence = []
+
+        print('predicting...')
+        startime = time.time()
+        for i in range(len(test_data)):
+            label, confidence = self.model.predict(test_data[i])
+            
+            pred_label.append(label)
+            pred_confidence.append(confidence)
+
+        endtime = time.time()
+        costime = round(endtime - startime, 0)
+        print(self.model_name + ' 预测耗时: ' + str(costime) + 's')
+
+        return pred_label, pred_confidence
+
+
+    def evaluate(self, pred_label, label):
+        n = len(label)
+        correct_num = 0
+
+        for i in range(n):
+            if label[i] == pred_label[i]:
+                correct_num += 1
+                
+        print(self.model_name + " acc: " +  str(1.0 * correct_num / n))
+```
 
 
 
