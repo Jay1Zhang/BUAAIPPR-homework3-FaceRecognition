@@ -59,13 +59,13 @@ class Model():
 
 
 if __name__ == "__main__":
-    ds_name = 'Pose07'
+    ds_name = 'Pose29'
 
     dataset = Dataset(ds_name)
     dataset.load()
     dataset.describe()
     trainset, testset = dataset.gen_dataset()
-    
+    """
     # PCA
     pca_model = Model('PCA')
     pca_model.train(trainset['data'], trainset['label'])
@@ -74,10 +74,10 @@ if __name__ == "__main__":
     """
     # LDA
     lda_model = Model('LDA')
-    lda_model.train(trainset['data'][:train_index], trainset['label'][:train_index])
-    pred_label, pred_confidence = lda_model.predict(testset['data'][:test_index])
-    lda_model.evaluate(pred_label, testset['label'][:test_index])
-    
+    lda_model.train(trainset['data'], trainset['label'])
+    pred_label, pred_confidence = lda_model.predict(testset['data'])
+    lda_model.evaluate(pred_label, testset['label'])
+    """
     # LBPH
     lbph_model = Model('LBPH')
     lbph_model.train(trainset['data'], trainset['label'])
